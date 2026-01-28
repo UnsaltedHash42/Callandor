@@ -2,7 +2,7 @@
 
 ![Callandor Logo](logo.png)
 
-A dark, powerful Swift-based tool designed to hunt down **Dynamic Library (dylib) Hijacking** vulnerabilities in macOS applications. Named after the "Sword That Is Not A Sword", it acts as both a scanner and a weapon (exploit generator).
+A Swift-based tool designed to hunt down **Dynamic Library (dylib) Hijacking** vulnerabilities in macOS applications. Named after the "Sword That Is Not A Sword", it acts as both a scanner and a weapon (exploit generator).
 
 ## 🚀 Features
 
