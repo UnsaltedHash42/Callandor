@@ -78,9 +78,7 @@ Callandor generate --type raw --payload agent.bin --output agent.dylib
 | `envVarInjection` | **High** | Binary lacks Hardened Runtime or Restricted status, allowing code injection via environment variables. |
 | `relativePath` | **Medium** | Library is loaded via a relative path, which can be manipulated. |
 
-## 🎨 Visuals
 
-The tool features a raw, cyberpunk-inspired CLI interface.
 
 ## 📄 License
 
