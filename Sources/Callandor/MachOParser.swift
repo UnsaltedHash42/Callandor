@@ -172,6 +172,7 @@ class MachOParser {
             let LC_REEXPORT: UInt32     = 0x1F | 0x80000000 // LC_REEXPORT_DYLIB
             let LC_ENCRYPT_64: UInt32   = 0x2C // LC_ENCRYPTION_INFO_64
             let LC_ENCRYPT_32: UInt32   = 0x21 // LC_ENCRYPTION_INFO
+            let LC_SYMTAB_CMD: UInt32   = 0x2  // LC_SYMTAB
 
             for _ in 0..<ncmds {
                 guard cmdPtr + 8 <= dataLen else { break }
@@ -213,6 +214,20 @@ class MachOParser {
                     if segName == "__RESTRICT" {
                         info.isRestricted = true
                     }
+                    if segName == "__TEXT", seg.nsects > 0, seg.nsects < 1000 {
+                        let secSize = MemoryLayout<section_64>.size
+                        var secPtr = cmdPtr + MemoryLayout<segment_command_64>.size
+                        for _ in 0..<seg.nsects {
+                            guard secPtr + secSize <= cmdPtr + Int(cmd.cmdsize), secPtr + secSize <= dataLen else { break }
+                            let sec = base.advanced(by: secPtr).load(as: section_64.self)
+                            if readSectionName64(sec) == "__cstring" {
+                                // section offset is relative to the slice start
+                                info.cstringOffset = UInt64(offset) + UInt64(sec.offset)
+                                info.cstringSize = sec.size
+                            }
+                            secPtr += secSize
+                        }
+                    }
 
                 case LC_SEG32:
                     guard cmdPtr + MemoryLayout<segment_command>.size <= dataLen else { break }
@@ -232,6 +247,18 @@ class MachOParser {
                     guard cmdPtr + 20 <= dataLen else { break }
                     let cryptid = base.advanced(by: cmdPtr + 16).load(as: UInt32.self)
                     if cryptid != 0 { info.isEncrypted = true }
+
+                case LC_SYMTAB_CMD:
+                    guard cmdPtr + MemoryLayout<symtab_command>.size <= dataLen else { break }
+                    let symtab = base.advanced(by: cmdPtr).load(as: symtab_command.self)
+                    // stroff is relative to the slice start
+                    let strStart = offset + Int(symtab.stroff)
+                    let strLen = Int(symtab.strsize)
+                    if strLen > 0, strStart >= 0, strStart + strLen <= dataLen {
+                        if containsSymbol(base: base, offset: strStart, len: strLen, symbol: "_dlopen") {
+                            info.importsDlopen = true
+                        }
+                    }
 
                 default:
                     break
@@ -283,6 +310,34 @@ class MachOParser {
             return String(data: data, encoding: .utf8)?
                 .trimmingCharacters(in: CharacterSet(charactersIn: "\0")) ?? ""
         }
+    }
+
+    private static func readSectionName64(_ sec: section_64) -> String {
+        withUnsafeBytes(of: sec.sectname) { buf in
+            let data = Data(buf)
+            return String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\0")) ?? ""
+        }
+    }
+
+    // Scan a string-table region for an exact null-terminated symbol name.
+    private static func containsSymbol(base: UnsafeRawPointer, offset: Int, len: Int, symbol: String) -> Bool {
+        let needle = Array(symbol.utf8)
+        guard !needle.isEmpty, len >= needle.count else { return false }
+        let ptr = base.advanced(by: offset).bindMemory(to: UInt8.self, capacity: len)
+        var i = 0
+        // String table is a sequence of null-terminated strings; match full tokens.
+        while i < len {
+            var j = i
+            while j < len && ptr[j] != 0 { j += 1 }
+            if j - i == needle.count {
+                var matched = true
+                for k in 0..<needle.count where ptr[i + k] != needle[k] { matched = false; break }
+                if matched { return true }
+            }
+            i = j + 1
+        }
+        return false
     }
 
     private static func readSegmentName32(_ seg: segment_command) -> String {

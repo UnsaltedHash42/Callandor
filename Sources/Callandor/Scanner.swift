@@ -45,6 +45,9 @@ class Scanner {
             let vulns = VulnerabilityDetector.check(binary: binaryInfo, executableURL: fileURL)
             vulnerabilities.append(contentsOf: vulns)
 
+            let dlopenVulns = DlopenDetector.check(binary: binaryInfo, executableURL: fileURL)
+            vulnerabilities.append(contentsOf: dlopenVulns)
+
             let deps = binaryInfo.loadCommands
                 .filter { $0.type == .loadDylib || $0.type == .loadWeakDylib || $0.type == .reexportDylib }
                 .map { $0.path }

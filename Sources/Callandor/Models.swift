@@ -84,6 +84,10 @@ struct BinaryInfo {
     var teamID: String? = nil
     var slices: [SliceInfo] = []
     var parsedArchName: String = "unknown"
+    // __TEXT,__cstring bounds (absolute file offset into the on-disk Data)
+    var cstringOffset: UInt64 = 0
+    var cstringSize: UInt64 = 0
+    var importsDlopen: Bool = false
 
     var loadViability: LoadViability {
         if isApplePlatformBinary { return .blocked }
@@ -110,6 +114,7 @@ enum VulnerabilityType: String, Encodable {
     case rpathHijack
     case relativePath
     case envVarInjection
+    case dlopenRelative
 }
 
 struct Vulnerability: Encodable {
