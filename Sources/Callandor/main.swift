@@ -145,7 +145,7 @@ if format == "json" {
     print("# Callandor Scan Report")
     print("Target: \(path)")
     print("Date: \(Date())\n")
-    
+
     if result.vulnerabilities.isEmpty {
         print("No vulnerabilities found.")
     } else {
@@ -154,18 +154,21 @@ if format == "json" {
             print("### \(vuln.type.rawValue)")
             print("- **Binary**: `\(vuln.targetBinary)`")
             print("- **Severity**: \(vuln.severity)")
+            print("- **Confidence**: \(vuln.confidence.rawValue)")
+            print("- **Load Viability**: \(vuln.loadViability)")
             print("- **Details**: \(vuln.details)")
             print("")
         }
     }
-    
+
     print("\nTotal binaries scanned: \(result.scannedBinaries.count)")
 
 } else {
     // Text
-    print("Found \(result.vulnerabilities.count) potential vulnerabilities.")
-    for vuln in result.vulnerabilities {
-        print("[\(vuln.severity)] \(vuln.type.rawValue): \(vuln.targetBinary) - \(vuln.details)")
+    let actionable = result.vulnerabilities.filter { $0.confidence != .blocked }
+    print("Found \(actionable.count) actionable vulnerabilities (\(result.vulnerabilities.count - actionable.count) blocked by code signing).")
+    for vuln in actionable {
+        print("[\(vuln.severity)/\(vuln.confidence.rawValue)] \(vuln.type.rawValue): \(vuln.targetBinary) - \(vuln.details)")
     }
     print("\nScanned \(result.scannedBinaries.count) binaries.")
 }
