@@ -109,6 +109,27 @@ surface is Electron-specific (RunAsNode/EmbeddedAsarIntegrity fuses, `app.asar` 
 `NODE_OPTIONS`, `--inspect`) — see [[electron-app-injection-macos]]. Callandor's dylib lens
 **under-reports** these; they need a separate Electron audit.
 
+## Electron coverage (separate vuln class; `electron_audit.py`)
+
+Callandor's dylib lens under-reports Electron apps, so a fuse/asar audit was run. The
+high-impact fuse is **RunAsNode**: with it ON, `ELECTRON_RUN_AS_NODE=1 <app>/Contents/MacOS/Electron`
+turns the signed binary into a Node interpreter → arbitrary code execution **with no file write
+and no dylib plant**, under the app's code-signing identity (trust laundering) and inheriting
+its TCC grants.
+
+| App | RunAsNode | Other | Verdict |
+|---|---|---|---|
+| Visual Studio Code | ON | NODE_OPTIONS, --inspect, no-asar-integrity | **EXPLOITABLE — proven** |
+| Cursor, Dropbox, GitHub Desktop, Insomnia, balenaEtcher | ON | NODE_OPTIONS, --inspect, no-asar-integrity | EXPLOITABLE |
+| Postman | ON | NODE_OPTIONS, no-asar-integrity | EXPLOITABLE |
+| OpenVPN Connect | OFF | NODE_OPTIONS, no-asar-integrity | EXPLOITABLE |
+| 1Password, Notion, Slack | OFF | fuses locked | hardened (good) |
+
+**Proven on nbvm:** `ELECTRON_RUN_AS_NODE=1 "Visual Studio Code.app/Contents/MacOS/Electron"
+-e '<js>'` executed arbitrary JS under `com.microsoft.VSCode` (TeamID UBF8T346G9), uid 501.
+See [[electron-app-injection-macos]]. (Candidate to bake into Callandor: detect Electron
+Framework, parse the fuse wire, flag RunAsNode/NODE_OPTIONS/asar-integrity.)
+
 ## Verified findings
 
 ### 1. Citrix Workspace — `libwebrpc.dylib` CWD rpath + `$ORIGIN` porting bug (LOW — NOT exploitable)
