@@ -1,0 +1,68 @@
+# Callandor test corpus — Homebrew cask tokens, enterprise-weighted.
+# One token per line; '#' comments and blank lines ignored.
+# Grouped by the recurring dylib-hijack target classes from the wiki survey
+# (Qt/ICU productivity, bundled-runtime dev tools, plugin-host media, Java/JNI,
+# Electron, unsigned legacy ports). Class is structural; specific versions drift.
+
+# --- Enterprise collaboration / comms (mostly Electron; many .pkg = need sudo) ---
+slack
+zoom
+microsoft-teams
+webex
+notion
+google-chrome
+firefox
+microsoft-edge
+1password
+dropbox
+google-drive
+box-drive
+
+# --- Remote access / IT (often .pkg installers, privileged helpers) ---
+citrix-workspace
+anydesk
+teamviewer
+royal-tsx
+
+# --- Office / productivity (Qt / ICU / large OSS frameworks -> @rpath order) ---
+libreoffice
+onlyoffice
+keepassxc
+db-browser-for-sqlite
+thunderbird
+zotero
+
+# --- Dev tools (bundled Node/Java/Python runtimes, JNI, Electron -> high yield) ---
+visual-studio-code
+iterm2
+intellij-idea-ce
+pycharm-ce
+android-studio
+sublime-text
+postman
+insomnia
+dbeaver-community
+sequel-ace
+sourcetree
+github
+cyberduck
+docker
+
+# --- Media / plugin-host (codec frameworks, optional dlopen'd dylibs) ---
+vlc
+audacity
+obs
+handbrake
+iina
+
+# --- Security / VPN / network (privileged components, bundled crypto) ---
+wireshark
+tunnelblick
+openvpn-connect
+
+# --- Utilities (some unsigned legacy ports) ---
+the-unarchiver
+appcleaner
+rectangle
+stats
+balenaetcher

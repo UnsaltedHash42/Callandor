@@ -16,3 +16,6 @@ payload.c
 
 # Xcode
 *.xcodeproj
+testbed/.fixtures/
+testbed/install_results.tsv
+testbed/*.json
