@@ -30,9 +30,24 @@ process can hijack almost nothing. The realistic answer sits between the two —
 enterprise user is a **local admin** (`/Applications` group `admin`, frequently g+w), the
 user-owned findings are live.
 
+## Exploitability verdict (dynamically confirmed on nbvm)
+
+| Target | Callandor | Exploitable? | Why |
+|---|---|---|---|
+| DBeaver bundled JRE (`libjli.dylib`) | rpathHijack HIGH | **YES — proven** | `disable-library-validation` → planted unsigned dylib loads |
+| Citrix `libwebrpc.dylib` | rpathHijack LOW | **No** | LV enforced (hardened + TeamID, no disable-LV); real codecs resolve via `@executable_path/../Resources` |
+
+Callandor's load-viability gate separated the two correctly: HIGH/loadable for the exploitable
+JRE, LOW for the LV-protected Citrix binary. The gate is what makes the difference — a
+load-command-only scanner would rate the Citrix `.`/`$ORIGIN` rpath Critical.
+
+**Test-env caveat:** Homebrew 6 quarantines casks by default; the quarantine xattr makes
+Gatekeeper SIGKILL binaries run headless (exit 137, no output). Cleared it
+(`xattr -dr com.apple.quarantine`) to model an approved / MDM-deployed app before the PoC.
+
 ## Verified findings
 
-### 1. Citrix Workspace — `libwebrpc.dylib` CWD rpath + `$ORIGIN` porting bug (LOW)
+### 1. Citrix Workspace — `libwebrpc.dylib` CWD rpath + `$ORIGIN` porting bug (LOW — NOT exploitable)
 
 `/Applications/Citrix Workspace.app/Contents/CitrixWorkspaceApps/HdxRtcEngine.bundle/Contents/Resources/libwebrpc.dylib`
 
@@ -73,8 +88,21 @@ otool -l:
 
 First rpath (`bin/`) precedes the rpath that actually holds the dylib (`../lib`). Plant
 `libjli.dylib` in `bin/` → loads before the legit one (shadow). Correct shadow detection.
-Live only under a local-admin model (writing the bundle requires admin); dropped out when
-root-owned. Same pattern in Android Studio, IntelliJ CE, PyCharm CE bundled JREs.
+
+**Exploitable — proven on nbvm.** The launchers (`jcmd`, `jstack`, `jwebserver`, …) are
+hardened+Team-signed (OpenJDK, `JCDTMS22B4`) but ship `com.apple.security.cs.disable-library-validation`
+**and** `com.apple.security.cs.allow-dyld-environment-variables`. Library validation is off,
+so a planted unsigned dylib loads. Two confirmed vectors (each wrote a marker as the
+non-privileged user, bundle chowned back to the user to model local-admin/user-install):
+
+1. **rpath shadow** — a reexport proxy planted at `bin/libjli.dylib` loaded before
+   `../lib/libjli.dylib`, ran its constructor, and reexported the real symbols so the
+   launcher kept working. (This is exactly Callandor's Phase 4 proxy structure.)
+2. **`DYLD_INSERT_LIBRARIES`** — second, simpler vector enabled by the `allow-dyld` entitlement.
+
+Precondition: write access to the bundle (local admin on a managed Mac, or any user for a
+user-installed copy) — no code-signing barrier. Same OpenJDK signing in Android Studio,
+IntelliJ CE, PyCharm CE bundled JREs → same exposure.
 
 ### Other leads (user-owned model)
 
