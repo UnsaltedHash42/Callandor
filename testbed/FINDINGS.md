@@ -141,8 +141,11 @@ its TCC grants.
 | OpenVPN Connect | OFF | NODE_OPTIONS, no-asar-integrity | EXPLOITABLE |
 | 1Password, Notion, Slack | OFF | fuses locked | hardened (good) |
 
-**Proven on nbvm:** `ELECTRON_RUN_AS_NODE=1 "Visual Studio Code.app/Contents/MacOS/Electron"
--e '<js>'` executed arbitrary JS under `com.microsoft.VSCode` (TeamID UBF8T346G9), uid 501.
+**Proven on nbvm — `ELECTRON_RUN_AS_NODE=1 <main-exe> -e '<js>'` ran arbitrary JS under the
+vendor's signing identity for 7 apps:** VS Code (`com.microsoft.VSCode`/UBF8T346G9), Cursor
+(VDXQ22DGB9), GitHub Desktop (VEKTX9H2N7), Insomnia (FX44YY62GV), Postman (H7H8Q7M5CK),
+balenaEtcher (66H43P8FRG), Microsoft Azure Storage Explorer (UBF8T346G9). Dropbox's fuse reads
+ON but the main-exe invocation didn't take (native wrapper — needs the Electron helper; follow-up).
 See [[electron-app-injection-macos]]. (Candidate to bake into Callandor: detect Electron
 Framework, parse the fuse wire, flag RunAsNode/NODE_OPTIONS/asar-integrity.)
 
