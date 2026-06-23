@@ -1,0 +1,20 @@
+# Batch 2 — enterprise apps not in the first corpus. Large ones first so they
+# install while disk is available (installer is disk-guarded + cleans cache).
+microsoft-office
+adobe-acrobat-reader
+vmware-horizon-client
+microsoft-remote-desktop
+company-portal
+onedrive
+powershell
+globalprotect
+microsoft-azure-storage-explorer
+tableau-public
+jetbrains-toolbox
+zoom
+figma
+signal
+discord
+bitwarden
+mountain-duck
+keka

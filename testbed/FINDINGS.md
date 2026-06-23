@@ -69,6 +69,17 @@ Docker, Firefox, HandBrake, IINA, IntelliJ IDEA CE, LibreOffice, Notion, OBS, ON
 Obsidian, PyCharm CE, Royal TSX, Slack, Stats, Sublime Text, Thunderbird, VLC, Visual Studio
 Code, Webex, Wireshark, balenaEtcher.
 
+### Bundle weakest-link rollup (added to Callandor)
+
+LV is per-binary, so a bundle is only as strong as its weakest Mach-O. Callandor already
+enumerated every binary per bundle (verified 391/391 vs the RE-platform gatherer on Citrix);
+it now rolls that up (`BundleAnalyzer`). Corpus result: **34 of 51 top-level apps (67%) have a
+LOADABLE foothold** — a binary with no LV barrier (mostly `disable-library-validation`, some
+unsigned/non-hardened) — independent of write access. Includes VS Code, Slack, Teams, Zoom,
+Webex, Box, Docker, Chrome, Edge, Notion, Citrix, plus the heavy-finding apps (LibreOffice
+213/216, Android Studio 183/183, Audacity 132/132). The foothold binary is named in the output
+so a bundle is never judged by one binary again.
+
 ### Bypassing `SAME_TEAM_ONLY` (LV enforced)
 
 Per [[macos-code-signing-architecture]] / [[dylib-hijacking-macos]] / [[amfi-code-signature-validation]]:
