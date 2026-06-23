@@ -16,10 +16,11 @@ class Scanner {
 
         FileHandle.standardError.write("Starting scan of \(path)...\n".data(using: .utf8)!)
 
+        // No .skipsHiddenFiles: bundles can hide Mach-Os in dot-prefixed paths.
         guard let enumerator = fileManager.enumerator(
             at: url,
             includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
-            options: [.skipsHiddenFiles]
+            options: []
         ) else {
             print("Error: Could not enumerate \(path)")
             return ScanResult(vulnerabilities: [], scannedBinaries: [])
@@ -66,6 +67,7 @@ class Scanner {
                 disablesLibraryValidation: binaryInfo.disablesLibraryValidation,
                 isEncrypted: binaryInfo.isEncrypted,
                 isApplePlatformBinary: binaryInfo.isApplePlatformBinary,
+                allowsEnvVars: binaryInfo.allowsEnvVars,
                 teamID: binaryInfo.teamID,
                 loadViability: binaryInfo.loadViability.rawValue
             ))
@@ -76,7 +78,8 @@ class Scanner {
             }
         }
 
-        return ScanResult(vulnerabilities: vulnerabilities, scannedBinaries: scannedBinaries)
+        let bundles = BundleAnalyzer.summarize(binaries: scannedBinaries, vulns: vulnerabilities)
+        return ScanResult(vulnerabilities: vulnerabilities, scannedBinaries: scannedBinaries, bundles: bundles)
     }
 
     private func isMachO(path: String) -> Bool {

@@ -210,4 +210,14 @@ if format == "json" {
         print("[\(vuln.severity)/\(vuln.confidence.rawValue)] \(vuln.type.rawValue): \(vuln.targetBinary) - \(vuln.details)")
     }
     print("\nScanned \(result.scannedBinaries.count) binaries.")
+
+    // Bundle weakest-link: bundles with a LOADABLE foothold AND hijack findings.
+    let exposed = result.bundles.filter { $0.weakestLink == "LOADABLE" && $0.hijackFindings > 0 }
+    if !exposed.isEmpty {
+        print("\nBundle weakest-link (LOADABLE foothold + hijackable load):")
+        for b in exposed {
+            print("  \(b.bundle) — \(b.hijackFindings) hijack finding(s), \(b.loadable)/\(b.binaryCount) binaries LOADABLE")
+            for f in b.footholds.prefix(3) { print("      foothold: \(f)") }
+        }
+    }
 }

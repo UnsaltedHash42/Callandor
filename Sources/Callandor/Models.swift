@@ -138,6 +138,26 @@ struct Vulnerability: Encodable {
 struct ScanResult: Encodable {
     var vulnerabilities: [Vulnerability]
     var scannedBinaries: [ScannedBinary]
+    var bundles: [BundleSummary] = []
+}
+
+// MARK: - Per-bundle weakest-link rollup
+//
+// A bundle is only as strong as its weakest Mach-O. Library validation is
+// per-binary, so a single LOADABLE binary (not hardened, or carrying
+// disable-library-validation / allow-dyld) is a foothold for the whole bundle —
+// a planted dylib it loads runs attacker code regardless of how locked-down the
+// main executable is. This rollup surfaces that so a bundle is never judged by
+// one binary.
+struct BundleSummary: Encodable {
+    let bundle: String
+    let binaryCount: Int
+    let loadable: Int
+    let sameTeamOnly: Int
+    let blocked: Int
+    let weakestLink: String          // best attacker foothold: LOADABLE > SAME_TEAM_ONLY > BLOCKED
+    let footholds: [String]          // LOADABLE binaries + why (relative paths)
+    let hijackFindings: Int
 }
 
 struct ScannedBinary: Encodable {
@@ -151,6 +171,7 @@ struct ScannedBinary: Encodable {
     let disablesLibraryValidation: Bool
     let isEncrypted: Bool
     let isApplePlatformBinary: Bool
+    let allowsEnvVars: Bool
     let teamID: String?
     let loadViability: String
 }
