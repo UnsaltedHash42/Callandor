@@ -35,7 +35,12 @@ user-owned findings are live.
 | Target | Callandor | Exploitable? | Why |
 |---|---|---|---|
 | DBeaver bundled JRE (`libjli.dylib`) | rpathHijack HIGH | **YES — proven** | `disable-library-validation` → planted unsigned dylib loads |
-| Citrix `libwebrpc.dylib` | rpathHijack LOW | **No** | LV enforced (hardened + TeamID, no disable-LV); real codecs resolve via `@executable_path/../Resources` |
+| Citrix `HdxRtcEngine` (`libwebrpc.dylib`) | rpathHijack LOW | No (this binary) | LV enforced on HdxRtcEngine; real codecs resolve via `@executable_path/../Resources` |
+| **Citrix `Viewer` (main process)** | — | **YES** (corrected) | Viewer has `disable-library-validation` + `allow-jit`; loads `libavcodec/libswscale/Ctx*` from its writable `Frameworks/` via `@rpath`. Same proven mechanism as DBeaver. App-specific detonation pending; entitlement + load structure verified. |
+
+**Correction:** an earlier pass called Citrix "not exploitable" off the one binary (HdxRtcEngine)
+that enforces LV. Wrong — judge the *bundle*, not one binary. The primary `Citrix Viewer`
+process disables LV. Lesson: per-binary, weakest-link wins.
 
 Callandor's load-viability gate separated the two correctly: HIGH/loadable for the exploitable
 JRE, LOW for the LV-protected Citrix binary. The gate is what makes the difference — a
@@ -44,6 +49,54 @@ load-command-only scanner would rate the Citrix `.`/`$ORIGIN` rpath Critical.
 **Test-env caveat:** Homebrew 6 quarantines casks by default; the quarantine xattr makes
 Gatekeeper SIGKILL binaries run headless (exit 137, no output). Cleared it
 (`xattr -dr com.apple.quarantine`) to model an approved / MDM-deployed app before the PoC.
+
+## Exploitable surface — corrected & expanded
+
+Two *independent* barriers, which an earlier pass conflated:
+
+- **Library validation (LV)** — code-signing gate. `LOADABLE` = no LV barrier (binary not
+  hardened, or carries `disable-library-validation`) → a planted *unsigned* dylib loads.
+  `SAME_TEAM_ONLY` = LV enforced → needs a bypass (below).
+- **Write access** — can you write the dylib's resolved path. Inside `/Applications/*.app` =
+  needs admin on a managed Mac (but: devs are often local admins; user-installed apps are
+  user-writable; auto-update staging dirs are often user-writable).
+
+Counts from the nbvm corpus (`scan_nbvm.json`): **4610 hijack findings — 3744 `LOADABLE`
+(no LV barrier) across 26 apps**, 866 `SAME_TEAM_ONLY`.
+
+26 apps with a no-LV-barrier hijack: Android Studio, Audacity, Cursor, Cyberduck, DBeaver,
+Docker, Firefox, HandBrake, IINA, IntelliJ IDEA CE, LibreOffice, Notion, OBS, ONLYOFFICE,
+Obsidian, PyCharm CE, Royal TSX, Slack, Stats, Sublime Text, Thunderbird, VLC, Visual Studio
+Code, Webex, Wireshark, balenaEtcher.
+
+### Bypassing `SAME_TEAM_ONLY` (LV enforced)
+
+Per [[macos-code-signing-architecture]] / [[dylib-hijacking-macos]] / [[amfi-code-signature-validation]]:
+
+1. **Weakest-link sibling** — LV is per-binary. If any binary in the bundle is `LOADABLE`
+   (non-hardened, or `disable-LV`) and loads the same dylib, plant once and it executes in
+   that binary. Bundles where every *finding* was `SAME_TEAM_ONLY` but a `LOADABLE` sibling
+   exists: **Citrix Workspace** (Citrix Viewer), **Google Chrome**, **Microsoft Edge**,
+   **The Unarchiver**.
+2. **`disable-library-validation` / `allow-dyld-environment-variables` entitlements** — common
+   on third-party apps (DBeaver JRE, Citrix Viewer). Trivial plant / `DYLD_INSERT`.
+3. **Ad-hoc re-sign** for non-LV contexts; Developer-ID theft (out of scope); notarization
+   swap (revocation race).
+4. **TCC inheritance** — injecting a process that holds camera/mic/Screen/FDA inherits those
+   grants (dylib injection → TCC bypass; cyberark/zznQ writeups). Citrix Viewer (`allow-jit`,
+   HDX media perms) is a candidate.
+
+Recent context (web): CVE-2025-30462 (App Sandbox bypass, SentinelOne); SIP strips `DYLD_*`
+for protected/hardened binaries but rpath hijack still works when LV is off; HackTricks
+"macOS Library Injection"; cyberark macOS pentest pt.3.
+
+### Coverage gap: Electron apps
+
+VS Code, Slack, Teams, Notion, Cursor, Obsidian are Electron — their classic dylib surface is
+~1 finding each (the `SAME_TEAM_ONLY` Electron-Framework `libffmpeg`). Their *real* attack
+surface is Electron-specific (RunAsNode/EmbeddedAsarIntegrity fuses, `app.asar` tampering,
+`NODE_OPTIONS`, `--inspect`) — see [[electron-app-injection-macos]]. Callandor's dylib lens
+**under-reports** these; they need a separate Electron audit.
 
 ## Verified findings
 
