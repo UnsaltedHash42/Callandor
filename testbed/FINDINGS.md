@@ -50,6 +50,22 @@ load-command-only scanner would rate the Citrix `.`/`$ORIGIN` rpath Critical.
 Gatekeeper SIGKILL binaries run headless (exit 137, no output). Cleared it
 (`xattr -dr com.apple.quarantine`) to model an approved / MDM-deployed app before the PoC.
 
+## Final tally (expanded corpus, 57 top-level apps)
+
+**43 of 57 apps exploitable** by at least one vector:
+- **39** have a no-LV **dylib foothold** (a binary in the bundle with no library-validation
+  barrier — `disable-library-validation` or unsigned/non-hardened); exploitable on bundle write.
+- **9** have **Electron fuse-RCE** (`RunAsNode`/`NODE_OPTIONS`); exploitable with no write at all.
+
+Clean on both axes (~13): 1Password, KeePassXC, DB Browser for SQLite, Sequel Ace, Sourcetree,
+TeamViewer, Tunnelblick, Zotero, iTerm, Microsoft Remote Desktop, Rectangle, AppCleaner,
+Google Drive.
+
+Caveat: batch-2 install was disk-limited — the VM's expanded space never got claimed by the
+APFS container (77 GB sits unpartitioned behind Recovery), so 8 casks skipped at the 3 GB floor
+and 4 `.pkg` casks (Office, Company Portal, PowerShell, GlobalProtect) failed. Corpus is
+representative but not exhaustive.
+
 ## Exploitable surface — corrected & expanded
 
 Two *independent* barriers, which an earlier pass conflated:
