@@ -26,6 +26,7 @@ enum LoadCommandType: String, Encodable {
     case loadDylib = "LC_LOAD_DYLIB"
     case loadWeakDylib = "LC_LOAD_WEAK_DYLIB"
     case reexportDylib = "LC_REEXPORT_DYLIB"
+    case idDylib = "LC_ID_DYLIB"
     case rpath = "LC_RPATH"
 }
 
@@ -36,9 +37,17 @@ struct DylibVersion: Encodable {
     let compatVersion: UInt32
 
     var currentVersionString: String {
-        let major = currentVersion >> 16
-        let minor = (currentVersion >> 8) & 0xFF
-        let patch = currentVersion & 0xFF
+        Self.format(currentVersion)
+    }
+
+    var compatVersionString: String {
+        Self.format(compatVersion)
+    }
+
+    private static func format(_ v: UInt32) -> String {
+        let major = v >> 16
+        let minor = (v >> 8) & 0xFF
+        let patch = v & 0xFF
         return "\(major).\(minor).\(patch)"
     }
 }

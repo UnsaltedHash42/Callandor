@@ -166,6 +166,7 @@ class MachOParser {
             var cmdPtr = offset + headerSize
             let LC_LOAD_WEAK: UInt32    = UInt32(LC_LOAD_WEAK_DYLIB)
             let LC_LOAD: UInt32         = UInt32(LC_LOAD_DYLIB)
+            let LC_ID: UInt32           = UInt32(LC_ID_DYLIB)
             let LC_RPATH_CMD: UInt32    = UInt32(LC_RPATH)
             let LC_SEG64: UInt32        = UInt32(LC_SEGMENT_64)
             let LC_SEG32: UInt32        = UInt32(LC_SEGMENT)
@@ -181,12 +182,13 @@ class MachOParser {
                 guard cmd.cmdsize >= 8, cmdPtr + Int(cmd.cmdsize) <= dataLen else { break }
 
                 switch cmd.cmd {
-                case LC_LOAD, LC_LOAD_WEAK, LC_REEXPORT:
+                case LC_LOAD, LC_LOAD_WEAK, LC_REEXPORT, LC_ID:
                     if let path = readDylibPath(base: base, cmdPtr: cmdPtr, cmdSize: Int(cmd.cmdsize), dataLen: dataLen) {
                         let type: LoadCommandType
                         switch cmd.cmd {
                         case LC_LOAD_WEAK: type = .loadWeakDylib
                         case LC_REEXPORT:  type = .reexportDylib
+                        case LC_ID:        type = .idDylib
                         default:           type = .loadDylib
                         }
 

