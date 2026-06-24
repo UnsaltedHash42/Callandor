@@ -31,9 +31,11 @@ keepassxc
 db-browser-for-sqlite
 thunderbird
 zotero
+obsidian
 
 # --- Dev tools (bundled Node/Java/Python runtimes, JNI, Electron -> high yield) ---
 visual-studio-code
+cursor
 iterm2
 intellij-idea-ce
 pycharm-ce
